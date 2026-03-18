@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "fs";
 
-const path = "./dist/server/wrangler.json";
+// 参照先を dist/_worker.js/ に変更
+const path = "./dist/_worker.js/wrangler.json";
 const config = JSON.parse(readFileSync(path, "utf-8"));
 
 // Pages非対応フィールドを削除

@@ -5,6 +5,10 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   output: "server",
+  build: {
+    client: "./dist",
+    server: "./dist/_worker.js",
+  },
   adapter: cloudflare({
     platformProxy: {
       enabled: true,
