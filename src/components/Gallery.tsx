@@ -88,10 +88,29 @@ export default function Gallery({ idols, genres }: Props) {
     setEditPreview(null);
   };
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setSelected(null);
     setEditing(false);
-  };
+  }, []);
+
+  // Escキーを監視する
+  useEffect(() => {
+    // モーダルが開いていない時は何もしない
+    if (!selected) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeModal();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    // クリーンアップ関数でイベントリスナーを削除
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selected, closeModal]);
 
   const toggleGenre = (genreId: number) => {
     setEditGenreIds((prev) =>
@@ -377,11 +396,13 @@ export default function Gallery({ idols, genres }: Props) {
             ) : (
               /* 詳細モード */
               <>
-                <img
-                  src={`/api/images/${selected.r2_key}`}
-                  alt=""
-                  className="w-full rounded-t-2xl"
-                />
+                <div className="flex justify-center bg-black/20 rounded-t-2xl">
+                  <img
+                    src={`/api/images/${selected.r2_key}`}
+                    alt=""
+                    className="max-h-[70vh] w-auto object-contain"
+                  />
+                </div>
                 <div className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1">
