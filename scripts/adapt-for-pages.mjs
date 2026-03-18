@@ -20,10 +20,18 @@ if (fs.existsSync(serverDir)) {
   fs.renameSync(serverDir, workerDir);
 }
 
-// 3. Pagesデプロイにおいて不要かつ競合の原因になるwrangler.jsonを削除
+// 3. 不要なwrangler.jsonを削除
 const wranglerJsonPath = path.join(workerDir, "wrangler.json");
 if (fs.existsSync(wranglerJsonPath)) {
   fs.rmSync(wranglerJsonPath);
 }
 
-console.log("✓ Adapted build output for Cloudflare Pages");
+// 4. Astroが生成したWranglerのリダイレクト設定を削除（これがないとデプロイ時にエラーになる）
+const wranglerDeployConfig = path.join(".wrangler", "deploy");
+if (fs.existsSync(wranglerDeployConfig)) {
+  fs.rmSync(wranglerDeployConfig, { recursive: true, force: true });
+}
+
+console.log(
+  "✓ Adapted build output for Cloudflare Pages and cleaned up deploy config",
+);
