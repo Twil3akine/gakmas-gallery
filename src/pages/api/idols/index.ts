@@ -3,7 +3,9 @@ import { env } from "cloudflare:workers";
 
 export const GET: APIRoute = async () => {
   const db = env.DB;
-  const result = await db.prepare("SELECT * FROM idols ORDER BY id ASC").all();
+  const result = await db
+    .prepare("SELECT * FROM idols ORDER BY sort_order ASC")
+    .all();
 
   return new Response(JSON.stringify(result.results), {
     headers: { "Content-Type": "application/json" },
@@ -22,7 +24,10 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const result = await db
-    .prepare("INSERT INTO idols (name) VALUES (?)")
+    .prepare(
+      `INSERT INTO idols (name, sort_order)
+       VALUES (?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM idols))`,
+    )
     .bind(name.trim())
     .run();
 

@@ -72,7 +72,7 @@ export async function listScreenshots(
   const orderMap = {
     created_at_desc: "s.created_at DESC",
     created_at_asc: "s.created_at ASC",
-    idol_name: "i.name ASC",
+    idol_name: "i.sort_order ASC", // ← name → sort_order
   };
   const order = orderMap[params.sort ?? "created_at_desc"];
 
