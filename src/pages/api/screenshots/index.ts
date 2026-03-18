@@ -10,7 +10,7 @@ export const GET: APIRoute = async ({ request }) => {
   const results = await listScreenshots(db, {
     idol_id: p.get("idol_id") ? Number(p.get("idol_id")) : undefined,
     genre_id: p.get("genre_id") ? Number(p.get("genre_id")) : undefined,
-    scene: p.get("scene") ?? undefined, // ← 追加
+    scene: p.get("scene") ?? undefined,
     favorite: p.get("favorite") === "1",
     q: p.get("q") ?? undefined,
     sort: (p.get("sort") as any) ?? "created_at_desc",
@@ -38,21 +38,46 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const idolIds = formData.getAll("idol_ids");
-  const scenes = formData.getAll("scenes"); // ← 追加
+  const scenes = formData.getAll("scenes");
   const bodies = formData.getAll("bodies");
   const genreIdsList = formData.getAll("genre_ids_list");
 
   const inserted: number[] = [];
+  const skipped: string[] = []; // 重複してスキップされたファイル名を記録
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const r2Key = `screenshots/${crypto.randomUUID()}-${file.name}`;
+    const buffer = await file.arrayBuffer();
 
-    await r2.put(r2Key, await file.arrayBuffer(), {
+    // 1. ファイルデータからSHA-256ハッシュを計算
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    // 2. 拡張子を取得し、ハッシュ値をファイル名にする
+    const extension = file.name.split(".").pop() || "png";
+    const r2Key = `screenshots/${hashHex}.${extension}`;
+
+    // 3. 同じハッシュの画像がDBに存在するかチェック
+    const existing = await db
+      .prepare("SELECT id FROM screenshots WHERE r2_key = ?")
+      .bind(r2Key)
+      .first();
+
+    if (existing) {
+      // 既に存在する場合はR2保存とDB保存をスキップする
+      skipped.push(file.name);
+      continue;
+    }
+
+    // 存在しない場合のみ R2 への保存を実行
+    await r2.put(r2Key, buffer, {
       httpMetadata: { contentType: file.type },
     });
 
-    // sceneカラムを追加してINSERT
+    // DB への INSERT を実行
     const result = await db
       .prepare(
         `INSERT INTO screenshots (r2_key, idol_id, scene, body)
@@ -61,7 +86,7 @@ export const POST: APIRoute = async ({ request }) => {
       .bind(
         r2Key,
         idolIds[i] ? Number(idolIds[i]) : null,
-        scenes[i] ? String(scenes[i]) : null, // ← 追加
+        scenes[i] ? String(scenes[i]) : null,
         bodies[i] ? String(bodies[i]) : null,
       )
       .run();
@@ -83,8 +108,16 @@ export const POST: APIRoute = async ({ request }) => {
     }
   }
 
-  return new Response(JSON.stringify({ inserted }), {
-    status: 201,
-    headers: { "Content-Type": "application/json" },
-  });
+  // レスポンスに成功数とスキップ数を明示する
+  return new Response(
+    JSON.stringify({
+      insertedCount: inserted.length,
+      skippedCount: skipped.length,
+      skippedFiles: skipped,
+    }),
+    {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 };
