@@ -10,6 +10,7 @@ export const GET: APIRoute = async ({ request }) => {
   const results = await listScreenshots(db, {
     idol_id: p.get("idol_id") ? Number(p.get("idol_id")) : undefined,
     genre_id: p.get("genre_id") ? Number(p.get("genre_id")) : undefined,
+    scene: p.get("scene") ?? undefined, // ← 追加
     favorite: p.get("favorite") === "1",
     q: p.get("q") ?? undefined,
     sort: (p.get("sort") as any) ?? "created_at_desc",
@@ -37,8 +38,8 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const idolIds = formData.getAll("idol_ids");
+  const scenes = formData.getAll("scenes"); // ← 追加
   const bodies = formData.getAll("bodies");
-  // ジャンルはJSON配列として受け取る ["1,2", "3"] のような形式
   const genreIdsList = formData.getAll("genre_ids_list");
 
   const inserted: number[] = [];
@@ -51,18 +52,23 @@ export const POST: APIRoute = async ({ request }) => {
       httpMetadata: { contentType: file.type },
     });
 
+    // sceneカラムを追加してINSERT
     const result = await db
       .prepare(
-        `INSERT INTO screenshots (r2_key, idol_id, body)
-         VALUES (?, ?, ?)`,
+        `INSERT INTO screenshots (r2_key, idol_id, scene, body)
+         VALUES (?, ?, ?, ?)`,
       )
-      .bind(r2Key, idolIds[i] ? Number(idolIds[i]) : null, bodies[i] || null)
+      .bind(
+        r2Key,
+        idolIds[i] ? Number(idolIds[i]) : null,
+        scenes[i] ? String(scenes[i]) : null, // ← 追加
+        bodies[i] ? String(bodies[i]) : null,
+      )
       .run();
 
     const screenshotId = result.meta.last_row_id as number;
     inserted.push(screenshotId);
 
-    // ジャンルの中間テーブルに挿入
     const genreIds = genreIdsList[i]
       ? String(genreIdsList[i]).split(",").filter(Boolean).map(Number)
       : [];

@@ -13,6 +13,7 @@ interface FileEntry {
   file: File;
   preview: string;
   idol_id: string;
+  scene: string;
   genre_ids: number[];
   body: string;
 }
@@ -21,6 +22,9 @@ interface Props {
   idols: Idol[];
   genres: Genre[];
 }
+
+// 選択できるシーンのリストを定義
+const SCENES = ["ライブ", "コミュ", "日常", "ホーム", "その他"];
 
 export default function UploadForm({ idols, genres }: Props) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
@@ -34,6 +38,7 @@ export default function UploadForm({ idols, genres }: Props) {
       file,
       preview: URL.createObjectURL(file),
       idol_id: "",
+      scene: "",
       genre_ids: [],
       body: "",
     }));
@@ -43,7 +48,7 @@ export default function UploadForm({ idols, genres }: Props) {
 
   const updateField = (
     index: number,
-    field: "idol_id" | "body",
+    field: "idol_id" | "scene" | "body",
     value: string,
   ) => {
     setEntries((prev) =>
@@ -78,6 +83,7 @@ export default function UploadForm({ idols, genres }: Props) {
     for (const entry of entries) {
       formData.append("files", entry.file);
       formData.append("idol_ids", entry.idol_id);
+      formData.append("scenes", entry.scene);
       formData.append("bodies", entry.body);
       formData.append("genre_ids_list", entry.genre_ids.join(","));
     }
@@ -127,18 +133,35 @@ export default function UploadForm({ idols, genres }: Props) {
                 ✕
               </button>
             </div>
-            <select
-              value={entry.idol_id}
-              onChange={(e) => updateField(i, "idol_id", e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
-            >
-              <option value="">アイドルを選択</option>
-              {idols.map((idol) => (
-                <option key={idol.id} value={idol.id}>
-                  {idol.name}
-                </option>
-              ))}
-            </select>
+
+            {/* アイドル選択とシーン選択を横並びに配置 */}
+            <div className="flex gap-2">
+              <select
+                value={entry.idol_id}
+                onChange={(e) => updateField(i, "idol_id", e.target.value)}
+                className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
+              >
+                <option value="">アイドルを選択</option>
+                {idols.map((idol) => (
+                  <option key={idol.id} value={idol.id}>
+                    {idol.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={entry.scene}
+                onChange={(e) => updateField(i, "scene", e.target.value)}
+                className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
+              >
+                <option value="">シーンを選択</option>
+                {SCENES.map((scene) => (
+                  <option key={scene} value={scene}>
+                    {scene}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* ジャンル複数選択 */}
             <div className="flex flex-wrap gap-1.5">

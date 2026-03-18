@@ -13,6 +13,7 @@ interface Screenshot {
   id: number;
   r2_key: string;
   idol_id: number | null;
+  scene: string | null;
   body: string | null;
   is_favorite: number;
   created_at: string;
@@ -26,6 +27,8 @@ interface Props {
   genres: Genre[];
 }
 
+const SCENES = ["ライブ", "コミュ", "その他"];
+
 export default function Gallery({ idols, genres }: Props) {
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +37,7 @@ export default function Gallery({ idols, genres }: Props) {
 
   // 編集フォーム状態
   const [editIdolId, setEditIdolId] = useState("");
+  const [editScene, setEditScene] = useState("");
   const [editGenreIds, setEditGenreIds] = useState<number[]>([]);
   const [editBody, setEditBody] = useState("");
   const [editFile, setEditFile] = useState<File | null>(null);
@@ -43,6 +47,7 @@ export default function Gallery({ idols, genres }: Props) {
   // フィルタ状態
   const [filterIdol, setFilterIdol] = useState<number | null>(null);
   const [filterGenre, setFilterGenre] = useState<number | null>(null);
+  const [filterScene, setFilterScene] = useState<string>("");
   const [filterFavorite, setFilterFavorite] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [sort, setSort] = useState("created_at_desc");
@@ -52,6 +57,7 @@ export default function Gallery({ idols, genres }: Props) {
     const p = new URLSearchParams();
     if (filterIdol) p.set("idol_id", String(filterIdol));
     if (filterGenre) p.set("genre_id", String(filterGenre));
+    if (filterScene) p.set("scene", filterScene);
     if (filterFavorite) p.set("favorite", "1");
     if (searchQ) p.set("q", searchQ);
     p.set("sort", sort);
@@ -60,7 +66,7 @@ export default function Gallery({ idols, genres }: Props) {
     const data = await res.json();
     setScreenshots(data);
     setLoading(false);
-  }, [filterIdol, filterGenre, filterFavorite, searchQ, sort]);
+  }, [filterIdol, filterGenre, filterScene, filterFavorite, searchQ, sort]);
 
   useEffect(() => {
     fetchScreenshots();
@@ -75,6 +81,7 @@ export default function Gallery({ idols, genres }: Props) {
     setSelected(s);
     setEditing(true);
     setEditIdolId(String(s.idol_id ?? ""));
+    setEditScene(s.scene ?? "");
     setEditGenreIds(s.genre_ids);
     setEditBody(s.body ?? "");
     setEditFile(null);
@@ -107,6 +114,7 @@ export default function Gallery({ idols, genres }: Props) {
 
     const formData = new FormData();
     formData.append("idol_id", editIdolId);
+    formData.append("scene", editScene);
     formData.append("genre_ids_list", editGenreIds.join(","));
     formData.append("body", editBody);
     if (editFile) formData.append("file", editFile);
@@ -158,6 +166,18 @@ export default function Gallery({ idols, genres }: Props) {
           {idols.map((i) => (
             <option key={i.id} value={i.id}>
               {i.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filterScene}
+          onChange={(e) => setFilterScene(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
+        >
+          <option value="">すべてのシーン</option>
+          {SCENES.map((scene) => (
+            <option key={scene} value={scene}>
+              {scene}
             </option>
           ))}
         </select>
@@ -220,6 +240,11 @@ export default function Gallery({ idols, genres }: Props) {
                   {s.idol_name && (
                     <span className="font-medium">{s.idol_name}</span>
                   )}
+                  {s.scene && (
+                    <span className="ml-2 px-1.5 py-0.5 bg-gray-700/80 rounded text-[10px]">
+                      {s.scene}
+                    </span>
+                  )}
                   {s.genre_names.length > 0 && (
                     <span className="ml-1 text-gray-300">
                       #{s.genre_names.join(" #")}
@@ -277,18 +302,33 @@ export default function Gallery({ idols, genres }: Props) {
                   </label>
                 </div>
 
-                <select
-                  value={editIdolId}
-                  onChange={(e) => setEditIdolId(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
-                >
-                  <option value="">アイドルを選択</option>
-                  {idols.map((idol) => (
-                    <option key={idol.id} value={idol.id}>
-                      {idol.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={editIdolId}
+                    onChange={(e) => setEditIdolId(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
+                  >
+                    <option value="">アイドルを選択</option>
+                    {idols.map((idol) => (
+                      <option key={idol.id} value={idol.id}>
+                        {idol.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={editScene}
+                    onChange={(e) => setEditScene(e.target.value)}
+                    className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
+                  >
+                    <option value="">シーンを選択</option>
+                    {SCENES.map((scene) => (
+                      <option key={scene} value={scene}>
+                        {scene}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="flex flex-wrap gap-1.5">
                   {genres.map((genre) => {

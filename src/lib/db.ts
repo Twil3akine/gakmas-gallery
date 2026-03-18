@@ -18,6 +18,7 @@ export interface Screenshot {
   id: number;
   r2_key: string;
   idol_id: number | null;
+  scene: string | null; // ← 追加
   body: string | null;
   is_favorite: number;
   created_at: string;
@@ -33,6 +34,7 @@ export interface ScreenshotWithRelations extends Screenshot {
 export type ListScreenshotsParams = {
   idol_id?: number;
   genre_id?: number;
+  scene?: string; // ← 追加
   favorite?: boolean;
   q?: string;
   sort?: "created_at_desc" | "created_at_asc" | "idol_name";
@@ -58,6 +60,11 @@ export async function listScreenshots(
     )`);
     values.push(params.genre_id);
   }
+  if (params.scene) {
+    // ← 追加
+    conditions.push("s.scene = ?");
+    values.push(params.scene);
+  }
   if (params.favorite) {
     conditions.push("s.is_favorite = 1");
   }
@@ -72,14 +79,13 @@ export async function listScreenshots(
   const orderMap = {
     created_at_desc: "s.created_at DESC",
     created_at_asc: "s.created_at ASC",
-    idol_name: "i.sort_order ASC", // ← name → sort_order
+    idol_name: "i.sort_order ASC",
   };
   const order = orderMap[params.sort ?? "created_at_desc"];
 
   const limit = params.limit ?? 50;
   const offset = params.offset ?? 0;
 
-  // スクリーンショット一覧を取得
   const sql = `
     SELECT
       s.*,
@@ -98,7 +104,6 @@ export async function listScreenshots(
 
   if (rows.results.length === 0) return [];
 
-  // ジャンルを一括取得
   const ids = rows.results.map((r) => r.id);
   const placeholders = ids.map(() => "?").join(",");
   const genreRows = await db
@@ -113,7 +118,6 @@ export async function listScreenshots(
     .bind(...ids)
     .all<{ screenshot_id: number; genre_id: number; genre_name: string }>();
 
-  // マップに集約
   const genreMap = new Map<number, { ids: number[]; names: string[] }>();
   for (const row of genreRows.results) {
     if (!genreMap.has(row.screenshot_id)) {

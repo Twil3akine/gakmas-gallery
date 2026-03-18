@@ -45,13 +45,17 @@ export const PUT: APIRoute = async ({ params, request }) => {
       httpMetadata: { contentType: newFile.type },
     });
 
+    const scene = formData.get("scene") ? String(formData.get("scene")) : null;
+
     await db
       .prepare(
-        `UPDATE screenshots
-         SET r2_key = ?, idol_id = ?, body = ?, updated_at = datetime('now')
-         WHERE id = ?`,
+        `
+      UPDATE screenshots
+      SET idol_id = ?, scene = ?, body = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `,
       )
-      .bind(newKey, idolId ? Number(idolId) : null, body || null, id)
+      .bind(idolId, scene, body, id)
       .run();
   } else {
     await db
