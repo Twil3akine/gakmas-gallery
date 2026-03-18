@@ -11,6 +11,7 @@ export default defineConfig({
       persist: { path: ".wrangler/state/v3" },
     },
     imageService: "passthrough",
+    sessionKVBindingName: false,
   }),
   security: {
     checkOrigin: false,
