@@ -1,0 +1,13 @@
+name = "gakumas-screenshot"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gakmas-db"
+database_id = "0ee8e101-87df-4937-9ee9-1abdce1b9cec"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "gakumas-screenshots"
