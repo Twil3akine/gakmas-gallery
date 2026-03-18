@@ -1,4 +1,6 @@
-import type { D1Database } from "@cloudflare/workers-types";
+import { env } from "cloudflare:workers";
+
+type D1Database = typeof env.DB;
 
 export interface Idol {
   id: number;
