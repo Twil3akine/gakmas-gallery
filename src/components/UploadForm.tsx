@@ -13,7 +13,7 @@ interface FileEntry {
   file: File;
   preview: string;
   idol_id: string;
-  genre_id: string;
+  genre_ids: number[];
   body: string;
 }
 
@@ -34,20 +34,35 @@ export default function UploadForm({ idols, genres }: Props) {
       file,
       preview: URL.createObjectURL(file),
       idol_id: "",
-      genre_id: "",
+      genre_ids: [],
       body: "",
     }));
     setEntries((prev) => [...prev, ...newEntries]);
     setDone(false);
   };
 
-  const update = (
+  const updateField = (
     index: number,
-    field: keyof Omit<FileEntry, "file" | "preview">,
+    field: "idol_id" | "body",
     value: string,
   ) => {
     setEntries((prev) =>
       prev.map((e, i) => (i === index ? { ...e, [field]: value } : e)),
+    );
+  };
+
+  const toggleGenre = (index: number, genreId: number) => {
+    setEntries((prev) =>
+      prev.map((e, i) => {
+        if (i !== index) return e;
+        const has = e.genre_ids.includes(genreId);
+        return {
+          ...e,
+          genre_ids: has
+            ? e.genre_ids.filter((g) => g !== genreId)
+            : [...e.genre_ids, genreId],
+        };
+      }),
     );
   };
 
@@ -63,8 +78,8 @@ export default function UploadForm({ idols, genres }: Props) {
     for (const entry of entries) {
       formData.append("files", entry.file);
       formData.append("idol_ids", entry.idol_id);
-      formData.append("genre_ids", entry.genre_id);
       formData.append("bodies", entry.body);
+      formData.append("genre_ids_list", entry.genre_ids.join(","));
     }
 
     await fetch("/api/screenshots", { method: "POST", body: formData });
@@ -75,7 +90,6 @@ export default function UploadForm({ idols, genres }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* ファイル選択エリア */}
       <div
         className="border-2 border-dashed border-gray-700 rounded-xl p-10 text-center cursor-pointer hover:border-gray-500 transition"
         onClick={() => inputRef.current?.click()}
@@ -94,7 +108,6 @@ export default function UploadForm({ idols, genres }: Props) {
         />
       </div>
 
-      {/* 各画像のメタデータ入力 */}
       {entries.map((entry, i) => (
         <div key={i} className="bg-gray-900 rounded-xl p-4 flex gap-4">
           <img
@@ -116,7 +129,7 @@ export default function UploadForm({ idols, genres }: Props) {
             </div>
             <select
               value={entry.idol_id}
-              onChange={(e) => update(i, "idol_id", e.target.value)}
+              onChange={(e) => updateField(i, "idol_id", e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
             >
               <option value="">アイドルを選択</option>
@@ -126,21 +139,31 @@ export default function UploadForm({ idols, genres }: Props) {
                 </option>
               ))}
             </select>
-            <select
-              value={entry.genre_id}
-              onChange={(e) => update(i, "genre_id", e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
-            >
-              <option value="">ジャンルを選択</option>
-              {genres.map((genre) => (
-                <option key={genre.id} value={genre.id}>
-                  {genre.name}
-                </option>
-              ))}
-            </select>
+
+            {/* ジャンル複数選択 */}
+            <div className="flex flex-wrap gap-1.5">
+              {genres.map((genre) => {
+                const selected = entry.genre_ids.includes(genre.id);
+                return (
+                  <button
+                    key={genre.id}
+                    type="button"
+                    onClick={() => toggleGenre(i, genre.id)}
+                    className={`px-2.5 py-1 rounded-full text-xs border transition ${
+                      selected
+                        ? "bg-blue-500/20 border-blue-500 text-blue-300"
+                        : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500"
+                    }`}
+                  >
+                    {genre.name}
+                  </button>
+                );
+              })}
+            </div>
+
             <textarea
               value={entry.body}
-              onChange={(e) => update(i, "body", e.target.value)}
+              onChange={(e) => updateField(i, "body", e.target.value)}
               placeholder="メモ（任意）"
               rows={2}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500 resize-none"

@@ -14,12 +14,12 @@ interface Screenshot {
   id: number;
   r2_key: string;
   idol_id: number | null;
-  genre_id: number | null;
   body: string | null;
   is_favorite: number;
   created_at: string;
   idol_name: string | null;
-  genre_name: string | null;
+  genre_ids: number[];
+  genre_names: string[];
 }
 
 interface Props {
@@ -157,8 +157,10 @@ export default function Gallery({ idols, genres }: Props) {
                   {s.idol_name && (
                     <span className="font-medium">{s.idol_name}</span>
                   )}
-                  {s.genre_name && (
-                    <span className="ml-1 text-gray-300">#{s.genre_name}</span>
+                  {s.genre_names.length > 0 && (
+                    <span className="ml-1 text-gray-300">
+                      #{s.genre_names.join(" #")}
+                    </span>
                   )}
                 </div>
               </div>
@@ -193,9 +195,9 @@ export default function Gallery({ idols, genres }: Props) {
                   {selected.idol_name && (
                     <div className="font-medium">{selected.idol_name}</div>
                   )}
-                  {selected.genre_name && (
+                  {selected.genre_names.length > 0 && (
                     <div className="text-sm text-gray-400">
-                      #{selected.genre_name}
+                      {selected.genre_names.map((g) => `#${g}`).join(" ")}
                     </div>
                   )}
                   {selected.body && (

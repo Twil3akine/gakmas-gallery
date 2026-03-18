@@ -36,12 +36,10 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
-  // 各ファイルに対応するメタデータを取得
-  // フロントからは files[0], files[1]... に対して
-  // idol_ids[0], genre_ids[0], bodies[0]... という形で送る
   const idolIds = formData.getAll("idol_ids");
-  const genreIds = formData.getAll("genre_ids");
   const bodies = formData.getAll("bodies");
+  // ジャンルはJSON配列として受け取る ["1,2", "3"] のような形式
+  const genreIdsList = formData.getAll("genre_ids_list");
 
   const inserted: number[] = [];
 
@@ -49,26 +47,34 @@ export const POST: APIRoute = async ({ request }) => {
     const file = files[i];
     const r2Key = `screenshots/${crypto.randomUUID()}-${file.name}`;
 
-    // R2にアップロード
     await r2.put(r2Key, await file.arrayBuffer(), {
       httpMetadata: { contentType: file.type },
     });
 
-    // D1に保存
     const result = await db
       .prepare(
-        `INSERT INTO screenshots (r2_key, idol_id, genre_id, body)
-         VALUES (?, ?, ?, ?)`,
+        `INSERT INTO screenshots (r2_key, idol_id, body)
+         VALUES (?, ?, ?)`,
       )
-      .bind(
-        r2Key,
-        idolIds[i] ? Number(idolIds[i]) : null,
-        genreIds[i] ? Number(genreIds[i]) : null,
-        bodies[i] || null,
-      )
+      .bind(r2Key, idolIds[i] ? Number(idolIds[i]) : null, bodies[i] || null)
       .run();
 
-    inserted.push(result.meta.last_row_id as number);
+    const screenshotId = result.meta.last_row_id as number;
+    inserted.push(screenshotId);
+
+    // ジャンルの中間テーブルに挿入
+    const genreIds = genreIdsList[i]
+      ? String(genreIdsList[i]).split(",").filter(Boolean).map(Number)
+      : [];
+
+    for (const genreId of genreIds) {
+      await db
+        .prepare(
+          "INSERT INTO screenshot_genres (screenshot_id, genre_id) VALUES (?, ?)",
+        )
+        .bind(screenshotId, genreId)
+        .run();
+    }
   }
 
   return new Response(JSON.stringify({ inserted }), {
