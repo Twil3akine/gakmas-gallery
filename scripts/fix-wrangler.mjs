@@ -3,24 +3,29 @@ import { readFileSync, writeFileSync } from "fs";
 const path = "./dist/server/wrangler.json";
 const config = JSON.parse(readFileSync(path, "utf-8"));
 
-// 不要なフィールドを削除
-delete config.triggers;
-delete config.kv_namespaces;
-delete config.definedEnvironments;
-delete config.secrets_store_secrets;
-delete config.unsafe_hello_world;
-delete config.worker_loaders;
-delete config.ratelimits;
-delete config.vpc_services;
-delete config.python_modules;
+// Pages非対応フィールドを削除
+const removeFields = [
+  "triggers",
+  "kv_namespaces",
+  "definedEnvironments",
+  "secrets_store_secrets",
+  "unsafe_hello_world",
+  "worker_loaders",
+  "ratelimits",
+  "vpc_services",
+  "python_modules",
+  "main",
+  "rules",
+  "assets",
+  "no_bundle",
+];
+for (const field of removeFields) {
+  delete config[field];
+}
+
 if (config.dev) {
   delete config.dev.enable_containers;
   delete config.dev.generate_types;
-}
-
-// ASSETSバインディングをリネーム
-if (config.assets?.binding === "ASSETS") {
-  config.assets.binding = "__STATIC_CONTENT";
 }
 
 writeFileSync(path, JSON.stringify(config, null, 2));
