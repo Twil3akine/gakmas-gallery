@@ -14,15 +14,18 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
   const formData = await request.formData();
   const idolId = formData.get("idol_id");
-  const genreId = formData.get("genre_id");
   const body = formData.get("body");
   const newFile = formData.get("file") as File | null;
+  const genreIds = formData.get("genre_ids_list")
+    ? String(formData.get("genre_ids_list"))
+        .split(",")
+        .filter(Boolean)
+        .map(Number)
+    : [];
 
-  // 画像差し替えがある場合
   if (newFile && newFile.size > 0) {
     const r2 = env.R2;
 
-    // 既存のr2_keyを取得
     const existing = await db
       .prepare("SELECT r2_key FROM screenshots WHERE id = ?")
       .bind(id)
@@ -35,10 +38,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
-    // 旧ファイルをR2から削除
     await r2.delete(existing.r2_key);
 
-    // 新ファイルをR2にアップロード
     const newKey = `screenshots/${crypto.randomUUID()}-${newFile.name}`;
     await r2.put(newKey, await newFile.arrayBuffer(), {
       httpMetadata: { contentType: newFile.type },
@@ -47,30 +48,33 @@ export const PUT: APIRoute = async ({ params, request }) => {
     await db
       .prepare(
         `UPDATE screenshots
-         SET r2_key = ?, idol_id = ?, genre_id = ?, body = ?, updated_at = datetime('now')
+         SET r2_key = ?, idol_id = ?, body = ?, updated_at = datetime('now')
          WHERE id = ?`,
       )
-      .bind(
-        newKey,
-        idolId ? Number(idolId) : null,
-        genreId ? Number(genreId) : null,
-        body || null,
-        id,
-      )
+      .bind(newKey, idolId ? Number(idolId) : null, body || null, id)
       .run();
   } else {
     await db
       .prepare(
         `UPDATE screenshots
-         SET idol_id = ?, genre_id = ?, body = ?, updated_at = datetime('now')
+         SET idol_id = ?, body = ?, updated_at = datetime('now')
          WHERE id = ?`,
       )
-      .bind(
-        idolId ? Number(idolId) : null,
-        genreId ? Number(genreId) : null,
-        body || null,
-        id,
+      .bind(idolId ? Number(idolId) : null, body || null, id)
+      .run();
+  }
+
+  // ジャンルを差し替え
+  await db
+    .prepare("DELETE FROM screenshot_genres WHERE screenshot_id = ?")
+    .bind(id)
+    .run();
+  for (const genreId of genreIds) {
+    await db
+      .prepare(
+        "INSERT INTO screenshot_genres (screenshot_id, genre_id) VALUES (?, ?)",
       )
+      .bind(id, genreId)
       .run();
   }
 
@@ -103,10 +107,7 @@ export const DELETE: APIRoute = async ({ params }) => {
     });
   }
 
-  // R2から削除
   await r2.delete(existing.r2_key);
-
-  // D1から削除
   await db.prepare("DELETE FROM screenshots WHERE id = ?").bind(id).run();
 
   return new Response(JSON.stringify({ ok: true }), {
