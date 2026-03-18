@@ -26,10 +26,17 @@ if (fs.existsSync(wranglerJsonPath)) {
   fs.rmSync(wranglerJsonPath);
 }
 
-// 4. Astroが生成したWranglerのリダイレクト設定を削除（これがないとデプロイ時にエラーになる）
+// 4. Astroが生成したWranglerのリダイレクト設定を削除
 const wranglerDeployConfig = path.join(".wrangler", "deploy");
 if (fs.existsSync(wranglerDeployConfig)) {
   fs.rmSync(wranglerDeployConfig, { recursive: true, force: true });
+}
+
+// 5. エントリーポイントをPagesの仕様に合わせて index.js にリネーム
+const entryPath = path.join(workerDir, "entry.mjs");
+const indexPath = path.join(workerDir, "index.js");
+if (fs.existsSync(entryPath)) {
+  fs.renameSync(entryPath, indexPath);
 }
 
 console.log(
