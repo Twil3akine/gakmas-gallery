@@ -23,13 +23,17 @@ interface Props {
   genres: Genre[];
 }
 
-// 選択できるシーンのリストを定義
-const SCENES = ["ライブ", "コミュ", "日常", "ホーム", "その他"];
+const SCENES = ["ライブ", "コミュ", "その他"];
 
 export default function UploadForm({ idols, genres }: Props) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
+  // 何枚成功して、何枚重複したかを保持するステート
+  const [uploadResult, setUploadResult] = useState<{
+    inserted: number;
+    skipped: number;
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,6 +48,7 @@ export default function UploadForm({ idols, genres }: Props) {
     }));
     setEntries((prev) => [...prev, ...newEntries]);
     setDone(false);
+    setUploadResult(null);
   };
 
   const updateField = (
@@ -88,12 +93,77 @@ export default function UploadForm({ idols, genres }: Props) {
       formData.append("genre_ids_list", entry.genre_ids.join(","));
     }
 
-    await fetch("/api/screenshots", { method: "POST", body: formData });
-    setEntries([]);
-    setUploading(false);
-    setDone(true);
+    try {
+      const res = await fetch("/api/screenshots", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setUploadResult({
+          inserted: data.insertedCount || 0,
+          skipped: data.skippedCount || 0,
+        });
+        setDone(true);
+        setEntries([]);
+      }
+    } catch (err) {
+      alert("アップロード失敗");
+    } finally {
+      setUploading(false);
+    }
   };
 
+  // --- 完了画面（done が true のとき） ---
+  if (done && uploadResult) {
+    return (
+      <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-8 text-center space-y-6">
+        <div className="space-y-2">
+          <div className="text-4xl">✓</div>
+          <h2 className="text-xl font-bold text-white">処理が完了しました</h2>
+
+          <div className="text-sm space-y-1">
+            {uploadResult.inserted > 0 && (
+              <p className="text-green-400">
+                {uploadResult.inserted} 枚の画像を新しく登録しました。
+              </p>
+            )}
+            {uploadResult.skipped > 0 && (
+              <p className="text-amber-400">
+                {uploadResult.skipped} 枚は既に登録済みのためスキップしました。
+              </p>
+            )}
+            {uploadResult.inserted === 0 && uploadResult.skipped > 0 && (
+              <p className="text-gray-500">
+                新規に登録された画像はありません。
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => {
+              setDone(false);
+              setUploadResult(null);
+            }}
+            className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-medium transition"
+          >
+            続けて投稿する
+          </button>
+          <a
+            href="/"
+            className="text-gray-400 hover:text-white transition underline text-sm"
+          >
+            ギャラリーに戻る
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // --- アップロード画面（通常時） ---
   return (
     <div className="space-y-6">
       <div
@@ -134,14 +204,13 @@ export default function UploadForm({ idols, genres }: Props) {
               </button>
             </div>
 
-            {/* アイドル選択とシーン選択を横並びに配置 */}
             <div className="flex gap-2">
               <select
                 value={entry.idol_id}
                 onChange={(e) => updateField(i, "idol_id", e.target.value)}
                 className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
               >
-                <option value="">アイドルを選択</option>
+                <option value="">アイドル</option>
                 {idols.map((idol) => (
                   <option key={idol.id} value={idol.id}>
                     {idol.name}
@@ -154,7 +223,7 @@ export default function UploadForm({ idols, genres }: Props) {
                 onChange={(e) => updateField(i, "scene", e.target.value)}
                 className="w-1/2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
               >
-                <option value="">シーンを選択</option>
+                <option value="">シーン</option>
                 {SCENES.map((scene) => (
                   <option key={scene} value={scene}>
                     {scene}
@@ -163,7 +232,6 @@ export default function UploadForm({ idols, genres }: Props) {
               </select>
             </div>
 
-            {/* ジャンル複数選択 */}
             <div className="flex flex-wrap gap-1.5">
               {genres.map((genre) => {
                 const selected = entry.genre_ids.includes(genre.id);
@@ -199,22 +267,10 @@ export default function UploadForm({ idols, genres }: Props) {
         <button
           onClick={submit}
           disabled={uploading}
-          className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition"
+          className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-bold transition"
         >
           {uploading ? "アップロード中..." : `${entries.length}枚を投稿する`}
         </button>
-      )}
-
-      {done && (
-        <div className="text-center space-y-2">
-          <div className="text-green-400">✓ 投稿しました！</div>
-          <a
-            href="/"
-            className="text-sm text-gray-400 hover:text-white transition underline"
-          >
-            ギャラリーに戻る
-          </a>
-        </div>
       )}
     </div>
   );
