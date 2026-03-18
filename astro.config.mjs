@@ -1,5 +1,27 @@
-// @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig } from "astro/config";
+import cloudflare from "@astrojs/cloudflare";
 
-// https://astro.build/config
-export default defineConfig({});
+import react from "@astrojs/react";
+
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+  output: "server",
+
+  adapter: cloudflare({
+    platformProxy: {
+      enabled: true,
+      persist: { path: ".wrangler/state/v3" },
+    },
+  }),
+
+  security: {
+    checkOrigin: false,
+  },
+
+  integrations: [react()],
+
+  vite: {
+    plugins: [tailwindcss()],
+  },
+});

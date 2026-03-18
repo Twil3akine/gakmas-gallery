@@ -1,3 +1,12 @@
 [tools]
 node = "22"
-pnpm = "latest"
+pnpm = "9"
+
+[tasks.dev]
+run = "pnpm dev"
+
+[tasks.deploy]
+run = "pnpm run build && wrangler pages deploy"
+
+[tasks.db-migrate]
+run = "wrangler d1 execute gakumas-db --file=./migrations/001_init.sql"

@@ -1,12 +1,11 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Gallery from "../components/Gallery";
+import UploadForm from "../components/UploadForm";
 import { env } from "cloudflare:workers";
 
 const db = env.DB;
-
 const [idolsResult, genresResult] = await Promise.all([
-  db.prepare("SELECT * FROM idols ORDER BY sort_order ASC").all(),
+  db.prepare("SELECT * FROM idols ORDER BY id ASC").all(),
   db.prepare("SELECT * FROM genres ORDER BY id ASC").all(),
 ]);
 
@@ -14,6 +13,9 @@ const idols = idolsResult.results as { id: number; name: string }[];
 const genres = genresResult.results as { id: number; name: string }[];
 ---
 
-<Layout>
-  <Gallery idols={idols} genres={genres} client:load />
+<Layout title="投稿 - 学マスギャラリー">
+  <div class="max-w-2xl mx-auto">
+    <h1 class="text-xl font-bold mb-6">スクリーンショットを投稿</h1>
+    <UploadForm idols={idols} genres={genres} client:load />
+  </div>
 </Layout>

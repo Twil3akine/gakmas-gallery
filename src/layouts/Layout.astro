@@ -1,0 +1,31 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+}
+const { title = "学マスギャラリー" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+  </head>
+  <body class="bg-gray-950 text-gray-100 min-h-screen">
+    <header class="sticky top-0 z-50 bg-gray-950/80 backdrop-blur border-b border-gray-800">
+      <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        <a href="/" class="font-bold text-lg tracking-tight">📸 学マスギャラリー</a>
+        <nav class="flex gap-4 text-sm">
+          <a href="/upload" class="hover:text-white text-gray-400 transition">投稿</a>
+          <a href="/admin/idols" class="hover:text-white text-gray-400 transition">管理</a>
+        </nav>
+      </div>
+    </header>
+    <main class="max-w-7xl mx-auto px-4 py-6">
+      <slot />
+    </main>
+  </body>
+</html>
