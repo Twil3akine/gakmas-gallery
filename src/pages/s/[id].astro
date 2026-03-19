@@ -1,0 +1,63 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Gallery from "../../components/Gallery";
+import { env } from "cloudflare:workers";
+
+const { id } = Astro.params;
+const db = env.DB;
+
+// 対象のスクショ情報を取得
+const screenshot = await db
+  .prepare(`
+    SELECT s.*, i.name AS idol_name
+    FROM screenshots s
+    LEFT JOIN idols i ON s.idol_id = i.id
+    WHERE s.id = ?
+  `)
+  .bind(Number(id))
+  .first<any>();
+
+if (!screenshot) {
+  return Astro.redirect("/");
+}
+
+// ジャンル情報を取得して結合
+const genreRows = await db
+  .prepare(`
+    SELECT g.id AS genre_id, g.name AS genre_name
+    FROM screenshot_genres sg
+    JOIN genres g ON sg.genre_id = g.id
+    WHERE sg.screenshot_id = ?
+  `)
+  .bind(Number(id))
+  .all<{ genre_id: number; genre_name: string }>();
+
+const initialScreenshot = {
+  ...screenshot,
+  genre_ids: genreRows.results.map((r) => r.genre_id),
+  genre_names: genreRows.results.map((r) => r.genre_name),
+};
+
+// ギャラリー表示用のマスタデータを取得
+const [idolsResult, genresResult] = await Promise.all([
+  db.prepare("SELECT * FROM idols ORDER BY sort_order ASC").all(),
+  db.prepare("SELECT * FROM genres ORDER BY id ASC").all(),
+]);
+const idols = idolsResult.results as { id: number; name: string }[];
+const genres = genresResult.results as { id: number; name: string }[];
+
+// OGP情報の構築
+const origin = new URL(Astro.request.url).origin;
+const imageUrl = `${origin}/api/images/${screenshot.r2_key}`;
+const title = screenshot.idol_name ? `${screenshot.idol_name}のスクショ - 学マスギャラリー` : "学マスギャラリー";
+const description = screenshot.body || "学マスギャラリーのスクリーンショット";
+---
+
+<Layout title={title} ogImage={imageUrl} ogDescription={description}>
+  <Gallery
+    idols={idols}
+    genres={genres}
+    initialScreenshot={initialScreenshot}
+    client:load
+  />
+</Layout>

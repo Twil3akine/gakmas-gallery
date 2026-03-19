@@ -3,8 +3,10 @@ import "../styles/global.css";
 
 interface Props {
   title?: string;
+  ogImage?: string;
+  ogDescription?: string;
 }
-const { title = "学マスギャラリー" } = Astro.props;
+const { title = "学マスギャラリー", ogImage, ogDescription = "学マスギャラリーのスクリーンショット" } = Astro.props;
 ---
 
 <!doctype html>
@@ -13,6 +15,12 @@ const { title = "学マスギャラリー" } = Astro.props;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
+
+    <meta property="og:title" content={title} />
+    　<meta property="og:description" content={ogDescription} />
+      {ogImage && <meta property="og:image" content={ogImage} />}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta property="og:type" content="website" />
   </head>
   <body class="bg-gray-950 text-gray-100 min-h-screen">
     <header class="sticky top-0 z-50 bg-gray-950/80 backdrop-blur border-b border-gray-800">

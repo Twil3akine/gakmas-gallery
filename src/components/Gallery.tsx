@@ -25,15 +25,21 @@ interface Screenshot {
 interface Props {
   idols: Idol[];
   genres: Genre[];
+  initialScreenshot?: Screenshot;
 }
 
 const SCENES = ["ライブ", "コミュ", "その他"];
 
-export default function Gallery({ idols, genres }: Props) {
+export default function Gallery({ idols, genres, initialScreenshot }: Props) {
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Screenshot | null>(null);
+  const [selected, setSelected] = useState<Screenshot | null>(
+    initialScreenshot ?? null,
+  );
   const [editing, setEditing] = useState(false);
+
+  // コピー完了を通知するためのステート
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   // 編集フォーム状態
   const [editIdolId, setEditIdolId] = useState("");
@@ -71,6 +77,18 @@ export default function Gallery({ idols, genres }: Props) {
   useEffect(() => {
     fetchScreenshots();
   }, [fetchScreenshots]);
+
+  // コピー処理の関数を追加;
+  const copyShareLink = async (id: number) => {
+    const url = `${window.location.origin}/s/${id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000); // 2秒後に「コピーしました」の表示を戻す
+    } catch (err) {
+      alert("リンクのコピーに失敗しました");
+    }
+  };
 
   const openDetail = (s: Screenshot) => {
     setSelected(s);
@@ -457,11 +475,21 @@ export default function Gallery({ idols, genres }: Props) {
                   </div>
                   <div className="flex gap-2 pt-2 border-t border-gray-800">
                     <button
+                      onClick={() => copyShareLink(selected.id)}
+                      className="flex-1 py-2 rounded-lg bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-300 text-sm transition"
+                    >
+                      {copiedId === selected.id
+                        ? "コピーしました！"
+                        : "リンクをコピー"}
+                    </button>
+
+                    <button
                       onClick={() => openEdit(selected)}
                       className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition"
                     >
                       編集
                     </button>
+
                     <button
                       onClick={() => deleteScreenshot(selected)}
                       className="flex-1 py-2 rounded-lg bg-red-900/40 hover:bg-red-900/60 text-red-400 text-sm transition"
