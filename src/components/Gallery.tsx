@@ -46,7 +46,7 @@ export default function Gallery({ idols, genres }: Props) {
 
   // フィルタ状態
   const [filterIdol, setFilterIdol] = useState<number | null>(null);
-  const [filterGenre, setFilterGenre] = useState<number | null>(null);
+  const [filterGenreIds, setFilterGenreIds] = useState<number[]>([]);
   const [filterScene, setFilterScene] = useState<string>("");
   const [filterFavorite, setFilterFavorite] = useState(false);
   const [searchQ, setSearchQ] = useState("");
@@ -56,7 +56,7 @@ export default function Gallery({ idols, genres }: Props) {
     setLoading(true);
     const p = new URLSearchParams();
     if (filterIdol) p.set("idol_id", String(filterIdol));
-    if (filterGenre) p.set("genre_id", String(filterGenre));
+    if (filterGenreIds.length > 0) p.set("genre_ids", filterGenreIds.join(","));
     if (filterScene) p.set("scene", filterScene);
     if (filterFavorite) p.set("favorite", "1");
     if (searchQ) p.set("q", searchQ);
@@ -66,7 +66,7 @@ export default function Gallery({ idols, genres }: Props) {
     const data = await res.json();
     setScreenshots(data);
     setLoading(false);
-  }, [filterIdol, filterGenre, filterScene, filterFavorite, searchQ, sort]);
+  }, [filterIdol, filterGenreIds, filterScene, filterFavorite, searchQ, sort]);
 
   useEffect(() => {
     fetchScreenshots();
@@ -200,20 +200,32 @@ export default function Gallery({ idols, genres }: Props) {
             </option>
           ))}
         </select>
-        <select
-          value={filterGenre ?? ""}
-          onChange={(e) =>
-            setFilterGenre(e.target.value ? Number(e.target.value) : null)
-          }
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gray-500"
-        >
-          <option value="">すべてのジャンル</option>
-          {genres.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
+        {/* ジャンル複数選択フィルタ */}
+        <div className="flex flex-wrap gap-1.5 items-center bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 min-h-[38px]">
+          <span className="text-xs text-gray-400 mr-1 ml-1">ジャンル:</span>
+          {genres.map((g) => {
+            const isSelected = filterGenreIds.includes(g.id);
+            return (
+              <button
+                key={g.id}
+                onClick={() => {
+                  setFilterGenreIds((prev) =>
+                    isSelected
+                      ? prev.filter((id) => id !== g.id)
+                      : [...prev, g.id],
+                  );
+                }}
+                className={`px-2.5 py-1 rounded-full text-xs border transition ${
+                  isSelected
+                    ? "bg-blue-500/20 border-blue-500 text-blue-300"
+                    : "bg-transparent border-gray-600 text-gray-400 hover:border-gray-400"
+                }`}
+              >
+                {g.name}
+              </button>
+            );
+          })}
+        </div>
         <button
           onClick={() => setFilterFavorite(!filterFavorite)}
           className={`px-3 py-1.5 rounded-lg text-sm border transition ${

@@ -7,9 +7,17 @@ export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const p = url.searchParams;
 
+  const genreIdsParam = p.get("genre_ids");
+  const genre_ids = genreIdsParam
+    ? genreIdsParam
+        .split(",")
+        .map(Number)
+        .filter((n) => !isNaN(n))
+    : undefined;
+
   const results = await listScreenshots(db, {
     idol_id: p.get("idol_id") ? Number(p.get("idol_id")) : undefined,
-    genre_id: p.get("genre_id") ? Number(p.get("genre_id")) : undefined,
+    genre_ids,
     scene: p.get("scene") ?? undefined,
     favorite: p.get("favorite") === "1",
     q: p.get("q") ?? undefined,
@@ -69,7 +77,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (existing) {
       // 既に存在する場合はR2保存とDB保存をスキップする
-    skipped.push(file.name);
+      skipped.push(file.name);
       continue;
     }
 
