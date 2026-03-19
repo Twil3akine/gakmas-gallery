@@ -29,6 +29,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   const formData = await request.formData();
   const files = formData.getAll("files") as File[];
+  const thumbnails = formData.getAll("thumbnails") as File[];
 
   if (files.length === 0) {
     return new Response(JSON.stringify({ error: "No files provided" }), {
@@ -68,7 +69,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (existing) {
       // 既に存在する場合はR2保存とDB保存をスキップする
-      skipped.push(file.name);
+    skipped.push(file.name);
       continue;
     }
 
@@ -76,6 +77,15 @@ export const POST: APIRoute = async ({ request }) => {
     await r2.put(r2Key, buffer, {
       httpMetadata: { contentType: file.type },
     });
+
+    // サムネイル画像があれば、末尾を _thumb.webp にして保存
+    if (thumbnails[i] && thumbnails[i].size > 0) {
+      const thumbBuffer = await thumbnails[i].arrayBuffer();
+      const thumbKey = r2Key.replace(/\.[^.]+$/, "_thumb.webp");
+      await r2.put(thumbKey, thumbBuffer, {
+        httpMetadata: { contentType: "image/webp" },
+      });
+    }
 
     // DB への INSERT を実行
     const result = await db

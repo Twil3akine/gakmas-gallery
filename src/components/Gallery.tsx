@@ -249,7 +249,7 @@ export default function Gallery({ idols, genres }: Props) {
               onClick={() => openDetail(s)}
             >
               <img
-                src={`/api/images/${s.r2_key}`}
+                src={`/api/images/${s.r2_key}?thumb=1`}
                 alt={s.idol_name ?? ""}
                 className="w-full object-cover"
                 loading="lazy"
@@ -396,12 +396,21 @@ export default function Gallery({ idols, genres }: Props) {
             ) : (
               /* 詳細モード */
               <>
-                <div className="flex justify-center bg-black/20 rounded-t-2xl">
-                  <img
-                    src={`/api/images/${selected.r2_key}`}
-                    alt=""
-                    className="max-h-[70vh] w-auto object-contain"
-                  />
+                <div className="relative">
+                  <button
+                    onClick={closeModal}
+                    className="absolute top-3 right-3 z-10 w-10 h-10 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors shadow-lg"
+                    aria-label="閉じる"
+                  >
+                    ✕
+                  </button>
+                  <div className="flex justify-center bg-black/20 rounded-t-2xl">
+                    <img
+                      src={`/api/images/${selected.r2_key}`}
+                      alt=""
+                      className="max-h-[70vh] w-auto object-contain"
+                    />
+                  </div>
                 </div>
                 <div className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">

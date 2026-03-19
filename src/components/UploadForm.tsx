@@ -16,6 +16,7 @@ interface FileEntry {
   scene: string;
   genre_ids: number[];
   body: string;
+  thumbnail: Blob | null;
 }
 
 interface Props {
@@ -24,6 +25,38 @@ interface Props {
 }
 
 const SCENES = ["ライブ", "コミュ", "その他"];
+
+// 画像をリサイズしてWebP形式のBlobを生成する関数
+const generateThumbnail = (file: File, maxSize = 400): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxSize || height > maxSize) {
+        if (width > height) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        } else {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject("Blob error")),
+        "image/webp",
+        0.8 // 画質 (0〜1)
+      );
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = reject;
+  });
+};
 
 export default function UploadForm({ idols, genres }: Props) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
@@ -36,16 +69,23 @@ export default function UploadForm({ idols, genres }: Props) {
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const onFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFilesSelected = async(e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    const newEntries = files.map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-      idol_id: "",
-      scene: "",
-      genre_ids: [],
-      body: "",
-    }));
+    // サムネイル生成を待つために Promise.all を使用する
+    const newEntries = await Promise.all(
+      files.map(async (file) => {
+        const thumbnail = await generateThumbnail(file).catch(() => null);
+        return {
+          file,
+          thumbnail,
+          preview: URL.createObjectURL(file),
+          idol_id: "",
+          scene: "",
+          genre_ids: [],
+          body: "",
+        };
+      })
+    );
     setEntries((prev) => [...prev, ...newEntries]);
     setDone(false);
     setUploadResult(null);
@@ -87,6 +127,7 @@ export default function UploadForm({ idols, genres }: Props) {
     const formData = new FormData();
     for (const entry of entries) {
       formData.append("files", entry.file);
+      formData.append("thumbnails", entry.thumbnail || new Blob([]), "thumb.webp");
       formData.append("idol_ids", entry.idol_id);
       formData.append("scenes", entry.scene);
       formData.append("bodies", entry.body);
