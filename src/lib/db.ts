@@ -33,8 +33,8 @@ export interface ScreenshotWithRelations extends Screenshot {
 
 export type ListScreenshotsParams = {
   idol_id?: number;
-  genre_id?: number;
-  scene?: string; // ← 追加
+  genre_id?: number[];
+  scene?: string;
   favorite?: boolean;
   q?: string;
   sort?: "created_at_desc" | "created_at_asc" | "idol_name";
@@ -53,15 +53,16 @@ export async function listScreenshots(
     conditions.push("s.idol_id = ?");
     values.push(params.idol_id);
   }
-  if (params.genre_id) {
-    conditions.push(`EXISTS (
-      SELECT 1 FROM screenshot_genres sg
-      WHERE sg.screenshot_id = s.id AND sg.genre_id = ?
-    )`);
-    values.push(params.genre_id);
+  if (params.genre_ids && params.genre_ids.length > 0) {
+    for (const genreId of params.genre_ids) {
+      conditions.push(`EXISTS (
+          SELECT 1 FROM screenshot_genres sg
+          WHERE sg.screenshot_id = s.id AND sg.genre_id = ?
+        )`);
+      values.push(genreId);
+    }
   }
   if (params.scene) {
-    // ← 追加
     conditions.push("s.scene = ?");
     values.push(params.scene);
   }
